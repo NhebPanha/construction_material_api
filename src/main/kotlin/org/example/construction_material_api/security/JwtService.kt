@@ -3,7 +3,7 @@ package org.example.construction_material_api.security
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
-import org.example.construction_material_api.common.InvalidTokenException
+import org.example.construction_material_api.common.UnauthorizedException
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
 import java.util.Date
@@ -59,15 +59,15 @@ class JwtService(private val properties: JwtProperties) {
                 .parseSignedClaims(token)
                 .payload
         } catch (ex: Exception) {
-            throw InvalidTokenException()
+            throw UnauthorizedException("Invalid or expired token")
         }
         if (claims["type"] != expectedType.name) {
-            throw InvalidTokenException("Unexpected token type")
+            throw UnauthorizedException("Unexpected token type")
         }
         return claims
     }
 
     fun usernameFrom(claims: Claims): String = claims.subject
 
-    fun roleFrom(claims: Claims): String = claims["role"]?.toString() ?: "CASHIER"
+    fun roleFrom(claims: Claims): String = claims["role"]?.toString() ?: "cashier"
 }

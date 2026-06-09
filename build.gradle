@@ -33,7 +33,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
-    implementation 'org.flywaydb:flyway-core'
+    // Spring Boot 4 split autoconfig into per-technology modules; this one provides
+    // FlywayAutoConfiguration and pulls in flyway-core.
+    implementation 'org.springframework.boot:spring-boot-flyway'
     implementation 'org.flywaydb:flyway-database-postgresql'
 
     runtimeOnly 'org.postgresql:postgresql'

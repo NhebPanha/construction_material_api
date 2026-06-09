@@ -1,3 +1,101 @@
+# Construction Material API (BuildPOS backend)
+
+A Kotlin + Spring Boot backend implementing the BuildPOS POS/ERP contract: auth (JWT),
+products, customers, suppliers, warehouses, inventory, sales (with holds & refunds),
+deliveries, and reports. Every response uses the standardized envelope, list endpoints are
+paginated and searchable, money values are server-authoritative, and stock can never go
+negative.
+
+> The full client contract this service implements is preserved verbatim below
+> ("Generate a production-ready REST API backend…"). This top section documents the
+> delivered implementation and how to run it.
+
+## Tech stack (as built)
+
+- Kotlin 2.2 / Java 17, Spring Boot 4.0
+- Spring Web MVC, Spring Data JPA (Hibernate), Spring Security + JWT (jjwt), Bean Validation
+- PostgreSQL with Flyway migrations (`src/main/resources/db/migration/V1__init.sql`)
+- Layering: Controller → Service → Repository → Entity, with DTOs (entities are never exposed)
+
+Notable deviations from the original spec, all verified working: Spring Boot **4.0** (the
+Gradle scaffold was already on 4.x) rather than 3.x; the build uses Groovy `build.gradle`
+rather than Kotlin DSL. The API contract (JSON shapes, field names, enum tokens, endpoints,
+business rules) is implemented exactly.
+
+## Prerequisites
+
+- Java 17+ (a 17 toolchain is configured; the bundled Gradle wrapper is used)
+- A PostgreSQL database
+
+## Database
+
+The app expects a database named `construction_material`. Connection settings default to
+`localhost:5432`, user/password `postgres`/`postgres`, and can be overridden with the
+`DB_URL`, `DB_USERNAME`, `DB_PASSWORD` environment variables.
+
+Quick start with Docker:
+
+```bash
+docker run -d --name buildpos-pg \
+  -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=construction_material \
+  -p 5432:5432 postgres:18-alpine
+```
+
+Flyway creates the schema on first start; the app seeds demo data and default users when the
+database is empty (disable with `APP_SEED_ENABLED=false`).
+
+## Build & run
+
+```bash
+# Windows
+.\gradlew.bat bootRun
+# *nix
+./gradlew bootRun
+```
+
+To point at a non-default database (e.g. Postgres on port 5544):
+
+```powershell
+$env:DB_URL='jdbc:postgresql://localhost:5544/construction_material'
+$env:DB_USERNAME='postgres'; $env:DB_PASSWORD='postgres'
+.\gradlew.bat bootRun
+```
+
+The service listens on `http://localhost:8080`. Run the tests (in-memory H2, no external DB
+needed) with `.\gradlew.bat test`.
+
+## Default users (seeded)
+
+| email                    | password      | role      |
+|--------------------------|---------------|-----------|
+| admin@buildpos.local     | admin123      | admin     |
+| cashier@buildpos.local   | cashier123    | cashier   |
+| warehouse@buildpos.local | warehouse123  | warehouse |
+
+## Quick try
+
+```bash
+curl -s localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@buildpos.local","password":"admin123"}'
+# → { "success": true, "data": { "accessToken": "…", "refreshToken": "…", "user": {…} }, … }
+```
+
+Pass `Authorization: Bearer <accessToken>` on every other request. See
+[`requests.http`](requests.http) for a ready-to-run collection covering all endpoints.
+
+## Implemented endpoints
+
+- `POST /api/v1/auth/login` · `POST /api/v1/auth/refresh` · `POST /api/v1/auth/logout` · `GET /api/v1/users/me`
+- `GET/POST /api/v1/products`, `GET/PUT/DELETE /api/v1/products/{id}` (`?q=&category=&lowStock=&page=&pageSize=`)
+- `GET/POST /api/v1/customers`, `…/{id}` · `GET/POST /api/v1/suppliers`, `…/{id}` · `GET/POST /api/v1/warehouses`, `…/{id}`
+- `GET /api/v1/inventory/stocks` · `GET/POST /api/v1/inventory/movements` · `GET /api/v1/inventory/dashboard`
+- `GET /api/v1/sales-orders` (`?status=&q=`) · `GET /api/v1/sales-orders/{id}` · `POST /api/v1/sales-orders` (complete) · `POST /api/v1/sales-orders/hold` · `POST /api/v1/sales-orders/{id}/refund`
+- `GET/POST /api/v1/deliveries` · `GET /api/v1/deliveries/{id}` · `PATCH /api/v1/deliveries/{id}/status`
+- `GET /api/v1/reports?range=daily|weekly|monthly|yearly` · `GET /api/v1/reports/dashboard`
+
+---
+
 Generate a production-ready REST API backend in **Kotlin + Spring Boot 3.x** for a
 construction-material POS/ERP app called **BuildPOS**. The mobile client is already
 built (Flutter + dio) and expects the EXACT contract below — do not deviate from the

@@ -1,97 +1,89 @@
-package org.example.construction_material_api.config
+﻿package org.example.construction_material_api.config
 
-import org.example.construction_material_api.customer.Customer
-import org.example.construction_material_api.customer.CustomerRepository
-import org.example.construction_material_api.inventory.InventoryService
-import org.example.construction_material_api.product.Product
-import org.example.construction_material_api.product.ProductRepository
-import org.example.construction_material_api.supplier.Supplier
-import org.example.construction_material_api.supplier.SupplierRepository
-import org.example.construction_material_api.user.User
-import org.example.construction_material_api.user.UserRepository
-import org.example.construction_material_api.user.UserRole
-import org.example.construction_material_api.warehouse.Warehouse
-import org.example.construction_material_api.warehouse.WarehouseRepository
+import org.example.construction_material_api.common.ProductCategory
+import org.example.construction_material_api.common.UserRole
+import org.example.construction_material_api.customer.model.Customer
+import org.example.construction_material_api.customer.repository.CustomerRepository
+import org.example.construction_material_api.product.model.Product
+import org.example.construction_material_api.product.repository.ProductRepository
+import org.example.construction_material_api.supplier.model.Supplier
+import org.example.construction_material_api.supplier.repository.SupplierRepository
+import org.example.construction_material_api.user.model.User
+import org.example.construction_material_api.user.repository.UserRepository
+import org.example.construction_material_api.warehouse.model.Warehouse
+import org.example.construction_material_api.warehouse.repository.WarehouseRepository
 import org.springframework.boot.CommandLineRunner
-import org.springframework.context.annotation.Profile
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 
 /**
- * Seeds a default admin user and a small set of sample data on first start so the API
- * is immediately usable. Skipped if data already exists. Disabled under the "test" profile.
+ * Seeds default users and demo data on first start when `app.seed.enabled` is true and
+ * the database is empty.
  */
 @Component
-@Profile("!test")
+@ConditionalOnProperty(prefix = "app.seed", name = ["enabled"], havingValue = "true", matchIfMissing = true)
 class DataSeeder(
     private val userRepository: UserRepository,
     private val productRepository: ProductRepository,
     private val customerRepository: CustomerRepository,
     private val supplierRepository: SupplierRepository,
     private val warehouseRepository: WarehouseRepository,
-    private val inventoryService: InventoryService,
     private val passwordEncoder: PasswordEncoder,
 ) : CommandLineRunner {
 
     @Transactional
     override fun run(vararg args: String) {
         if (userRepository.count() == 0L) {
-            userRepository.save(
-                User(
-                    username = "admin",
-                    passwordHash = passwordEncoder.encode("admin123")!!,
-                    fullName = "System Administrator",
-                    role = UserRole.ADMIN,
-                ),
-            )
-            userRepository.save(
-                User(
-                    username = "cashier",
-                    passwordHash = passwordEncoder.encode("cashier123")!!,
-                    fullName = "Front Desk Cashier",
-                    role = UserRole.CASHIER,
+            userRepository.saveAll(
+                listOf(
+                    User("System Administrator", "admin@buildpos.local", passwordEncoder.encode("admin123")!!, UserRole.admin),
+                    User("Front Desk Cashier", "cashier@buildpos.local", passwordEncoder.encode("cashier123")!!, UserRole.cashier),
+                    User("Warehouse Keeper", "warehouse@buildpos.local", passwordEncoder.encode("warehouse123")!!, UserRole.warehouse),
                 ),
             )
         }
 
-        val warehouse = warehouseRepository.findByCode("MAIN")
-            ?: warehouseRepository.save(Warehouse(code = "MAIN", name = "Main Warehouse", location = "HQ"))
-
         if (productRepository.count() == 0L) {
-            val products = listOf(
-                Product(sku = "CEM-50", name = "Portland Cement 50kg", unit = "BAG", category = "CEMENT",
-                    price = BigDecimal("8.50"), costPrice = BigDecimal("6.00"), reorderLevel = 50),
-                Product(sku = "REBAR-12", name = "Steel Rebar 12mm x 12m", unit = "PCS", category = "STEEL",
-                    price = BigDecimal("12.75"), costPrice = BigDecimal("9.50"), reorderLevel = 100),
-                Product(sku = "SAND-M3", name = "River Sand", unit = "M3", category = "AGGREGATE",
-                    price = BigDecimal("25.00"), costPrice = BigDecimal("18.00"), reorderLevel = 20),
-                Product(sku = "BRICK-STD", name = "Standard Clay Brick", unit = "PCS", category = "MASONRY",
-                    price = BigDecimal("0.35"), costPrice = BigDecimal("0.22"), reorderLevel = 1000),
+            productRepository.saveAll(
+                listOf(
+                    Product("Portland Cement 50kg", ProductCategory.cement, BigDecimal("6.00"), BigDecimal("8.50"), 200, 50, "bag", barcode = "CEM-50"),
+                    Product("Steel Rebar 12mm x 12m", ProductCategory.steel, BigDecimal("9.50"), BigDecimal("12.75"), 500, 100, "pcs", barcode = "REBAR-12"),
+                    Product("River Sand", ProductCategory.sand, BigDecimal("18.00"), BigDecimal("25.00"), 40, 20, "m3", barcode = "SAND-M3"),
+                    Product("Crushed Gravel 20mm", ProductCategory.gravel, BigDecimal("20.00"), BigDecimal("28.00"), 8, 15, "m3", barcode = "GRAVEL-20"),
+                    Product("Standard Clay Brick", ProductCategory.brick, BigDecimal("0.22"), BigDecimal("0.35"), 8000, 1000, "pcs", barcode = "BRICK-STD"),
+                    Product("Ceramic Floor Tile 60x60", ProductCategory.tile, BigDecimal("3.10"), BigDecimal("4.50"), 0, 50, "box", barcode = "TILE-6060"),
+                ),
             )
-            val saved = productRepository.saveAll(products)
-            val quantities = listOf(200, 500, 40, 8000)
-            saved.forEachIndexed { index, product ->
-                inventoryService.receive(
-                    product.id!!, warehouse.id!!, quantities[index], "SEED", "Opening stock",
-                )
-            }
         }
 
         if (customerRepository.count() == 0L) {
             customerRepository.saveAll(
                 listOf(
-                    Customer(name = "Acme Builders Ltd", phone = "+85512345678", email = "orders@acme.example",
-                        creditLimit = BigDecimal("10000.00")),
-                    Customer(name = "Walk-in Customer"),
+                    Customer("Acme Builders Ltd", "+85512345678", "orders@acme.example", "Phnom Penh", 120, BigDecimal("250.00"), BigDecimal("0.0500")),
+                    Customer("Walk-in Customer"),
                 ),
             )
         }
 
         if (supplierRepository.count() == 0L) {
-            supplierRepository.save(
-                Supplier(name = "National Cement Co", phone = "+85598765432", contactPerson = "Sok Dara"),
+            supplierRepository.saveAll(
+                listOf(
+                    Supplier("National Cement Co", "+85598765432", "sales@natcement.example", "Kampot", BigDecimal("1500.00")),
+                    Supplier("Mekong Steel Supply", "+85591112222", "info@mekongsteel.example", "Phnom Penh", BigDecimal("0.00")),
+                ),
+            )
+        }
+
+        if (warehouseRepository.count() == 0L) {
+            warehouseRepository.saveAll(
+                listOf(
+                    Warehouse("MAIN", "Main Warehouse", "HQ Yard", capacity = 10000, used = 6500, incoming = 800, outgoing = 400, isPrimary = true),
+                    Warehouse("NORTH", "North Depot", "Siem Reap", capacity = 4000, used = 1200, incoming = 200, outgoing = 150),
+                    Warehouse("SOUTH", "South Depot", "Sihanoukville", capacity = 3000, used = 900, incoming = 100, outgoing = 80),
+                ),
             )
         }
     }

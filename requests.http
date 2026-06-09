@@ -1,0 +1,189 @@
+### Construction Material API — example requests (IntelliJ / VS Code REST Client format)
+### Run "Login" first; it captures the access token into {{token}} for the rest.
+
+@host = http://localhost:8080/api/v1
+
+### Login (captures access + refresh tokens)
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@buildpos.local", "password": "admin123" }
+
+> {%
+  client.global.set("token", response.body.data.accessToken);
+  client.global.set("refreshToken", response.body.data.refreshToken);
+%}
+
+### Current user
+GET {{host}}/users/me
+Authorization: Bearer {{token}}
+
+### Refresh tokens
+POST {{host}}/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshToken}}" }
+
+### Logout
+POST {{host}}/auth/logout
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Products
+###############################################################################
+
+### List products (paginated, searchable, filterable)
+GET {{host}}/products?page=1&pageSize=20&q=&lowStock=false
+Authorization: Bearer {{token}}
+
+### List low-stock products in a category
+GET {{host}}/products?category=cement&lowStock=true
+Authorization: Bearer {{token}}
+
+### Create product
+# @name createProduct
+POST {{host}}/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Waterproof Cement Paint 20L",
+  "category": "paint",
+  "costPrice": 22.00,
+  "sellingPrice": 31.50,
+  "stockQuantity": 60,
+  "lowStockThreshold": 10,
+  "unit": "pail",
+  "barcode": "PAINT-WP-20"
+}
+
+### Get / update / delete product (use an id from the list)
+GET {{host}}/products/1
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Customers / Suppliers / Warehouses
+###############################################################################
+
+### Customers
+GET {{host}}/customers?q=acme
+Authorization: Bearer {{token}}
+
+### Create customer
+POST {{host}}/customers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "BuildRight Co", "phone": "+85577001100", "discountRate": 0.05 }
+
+### Suppliers
+GET {{host}}/suppliers
+Authorization: Bearer {{token}}
+
+### Warehouses
+GET {{host}}/warehouses
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Inventory
+###############################################################################
+
+### Stock levels
+GET {{host}}/inventory/stocks?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Movements (list)
+GET {{host}}/inventory/movements
+Authorization: Bearer {{token}}
+
+### Post a movement (adjusts product.stockQuantity atomically)
+POST {{host}}/inventory/movements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "productId": "1", "type": "stockIn", "quantity": 100, "note": "GRN-2025-001" }
+
+### Inventory dashboard KPIs
+GET {{host}}/inventory/dashboard
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Sales
+###############################################################################
+
+### Complete a sale (deducts stock transactionally, server-computed totals)
+POST {{host}}/sales-orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customerId": "1",
+  "lines": [
+    { "productId": "1", "quantity": 10 },
+    { "productId": "5", "quantity": 100, "lineDiscount": 1.50 }
+  ],
+  "discount": 5.00,
+  "taxRate": 0.10,
+  "paymentMethod": "abaKhqr",
+  "amountReceived": 200.00
+}
+
+### Hold a sale (parked draft, no stock deduction)
+POST {{host}}/sales-orders/hold
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "lines": [ { "productId": "1", "quantity": 3 } ], "paymentMethod": "cash" }
+
+### List sales (filter by status / search)
+GET {{host}}/sales-orders?status=completed&q=INV
+Authorization: Bearer {{token}}
+
+### Get a sale
+GET {{host}}/sales-orders/1
+Authorization: Bearer {{token}}
+
+### Refund a completed sale (restocks)
+POST {{host}}/sales-orders/1/refund
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Deliveries
+###############################################################################
+
+### Create delivery
+POST {{host}}/deliveries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customerName": "Acme Builders Ltd",
+  "address": "123 Site Rd, Phnom Penh",
+  "driverName": "Sok Dara",
+  "vehicle": "Truck-01",
+  "itemsSummary": "10x cement, 100x brick"
+}
+
+### List deliveries
+GET {{host}}/deliveries?status=pending
+Authorization: Bearer {{token}}
+
+### Update delivery status
+PATCH {{host}}/deliveries/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "inTransit" }
+
+###############################################################################
+# Reports
+###############################################################################
+
+### Range report
+GET {{host}}/reports?range=monthly
+Authorization: Bearer {{token}}
+
+### Dashboard
+GET {{host}}/reports/dashboard
+Authorization: Bearer {{token}}

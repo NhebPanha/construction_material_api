@@ -1,7 +1,7 @@
-package org.example.construction_material_api.security
+﻿package org.example.construction_material_api.security
 
-import org.example.construction_material_api.user.User
-import org.example.construction_material_api.user.UserRepository
+import org.example.construction_material_api.user.model.User
+import org.example.construction_material_api.user.repository.UserRepository
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
