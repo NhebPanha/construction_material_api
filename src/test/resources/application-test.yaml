@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:construction_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      # Let Hibernate build the schema for tests; Flyway is exercised against Postgres.
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+
+app:
+  jwt:
+    secret: "test-secret-value-that-is-definitely-long-enough-for-hs512-signing!!"
+  seed:
+    enabled: false

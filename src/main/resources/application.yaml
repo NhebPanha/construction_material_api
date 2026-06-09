@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: construction_material_api
+
+  # Default (dev) profile targets PostgreSQL with Flyway-managed schema.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/construction_material}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate only validates entity mappings against it.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+
+# Application-specific settings.
+app:
+  jwt:
+    # Override in production via APP_JWT_SECRET. Must be at least 32 bytes for HS512.
+    secret: ${APP_JWT_SECRET:change-me-to-a-long-random-secret-value-at-least-32-bytes-long!!}
+    access-token-ttl-minutes: 30
+    refresh-token-ttl-days: 7
+  seed:
+    # Seed demo data on startup if the database is empty.
+    enabled: true
+
+logging:
+  level:
+    org.springframework.security: INFO
+
+---
+# Production profile: same engine, stricter settings. Activate with SPRING_PROFILES_ACTIVE=prod
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+app:
+  seed:
+    enabled: false
